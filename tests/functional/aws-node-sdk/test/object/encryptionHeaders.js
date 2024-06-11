@@ -2,6 +2,7 @@ const assert = require('assert');
 const async = require('async');
 const uuid = require('uuid');
 const withV4 = require('../support/withV4');
+const BucketInfo = require('arsenal').models.BucketInfo;
 const BucketUtility = require('../../lib/utility/bucket-util');
 const kms = require('../../../../../lib/kms/wrapper');
 const { DummyRequestLogger } = require('../../../../unit/helpers');
@@ -87,7 +88,9 @@ describe('per object encryption headers', () => {
         let kmsKeyId;
 
         before(done => {
-            kms.createBucketKey('enc-bucket-test', log,
+            const bucket = new BucketInfo('enc-bucket-test', 'OwnerId',
+                'OwnerDisplayName', new Date().toJSON());
+            kms.createBucketKey(bucket, log,
                 (err, keyId) => {
                     assert.ifError(err);
                     kmsKeyId = keyId;
