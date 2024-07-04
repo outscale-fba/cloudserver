@@ -21,7 +21,7 @@
   "dependencies": {
     "@azure/storage-blob": "^12.12.0",
     "@hapi/joi": "^17.1.0",
-    "arsenal": "git+https://github.com/scality/arsenal#151bab48c758c8ed6c669182e5c88597767a78c2",
+    "arsenal": "git+https://github.com/scality/arsenal#b27d4538a922321bd6dbf7249565c0c57c9b4a49",
     "async": "~2.5.0",
     "aws-sdk": "2.905.0",
     "bucketclient": "scality/bucketclient#8.1.9",
