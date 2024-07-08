@@ -382,7 +382,7 @@ describe('POST object', () => {
                         const error = result.Error;
                         assert.equal(error.Code[0], 'InvalidArgument');
                         assert.equal(error.Message[0], 'POST requires exactly one file upload per request.');
-                        done();
+                        return done();
                     });
                 });
         });
