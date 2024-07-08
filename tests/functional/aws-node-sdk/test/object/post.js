@@ -37,7 +37,7 @@ const calculateFields = (ak, sk, bucketName, additionalConditions) => {
 
     const now = new Date();
     const formattedDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
-    const shortFormattedDate = formatDate(now);
+    let shortFormattedDate = formatDate(now);
 
     const credential = `${ak}/${shortFormattedDate}/${region}/${service}/aws4_request`;
     const conditionsFields = [
@@ -54,6 +54,9 @@ const calculateFields = (ak, sk, bucketName, additionalConditions) => {
             const index = conditionsFields.findIndex(condition => condition.hasOwnProperty(key));
             if (index !== -1) {
                 conditionsFields[index][key] = value;
+                if (key === 'x-amz-date') {
+                    shortFormattedDate = value.split('T')[0];
+                }
             } else {
                 conditionsFields.push({ [key]: value });
             }
@@ -69,11 +72,11 @@ const calculateFields = (ak, sk, bucketName, additionalConditions) => {
     const signature = crypto.createHmac('sha256', signingKey).update(policyBase64).digest('hex');
 
     const returnFields = [
-        { name: 'X-Amz-Credential', value: credential },
-        { name: 'X-Amz-Algorithm', value: 'AWS4-HMAC-SHA256' },
-        { name: 'X-Amz-Signature', value: signature },
-        { name: 'X-Amz-Date', value: formattedDate },
-        { name: 'Policy', value: policyBase64 },
+        { name: 'x-amz-credential', value: credential },
+        { name: 'x-amz-algorithm', value: 'AWS4-HMAC-SHA256' },
+        { name: 'x-amz-signature', value: signature },
+        { name: 'x-amz-date', value: formattedDate },
+        { name: 'policy', value: policyBase64 },
         { name: 'bucket', value: bucketName },
         { name: 'key', value: filename },
     ];
@@ -94,7 +97,6 @@ const calculateFields = (ak, sk, bucketName, additionalConditions) => {
     }
     return returnFields;
 };
-
 
 describe('POST object', () => {
     let bucketUtil;
@@ -372,7 +374,16 @@ describe('POST object', () => {
                 })
                 .catch(err => {
                     assert.equal(err.response.status, 400);
-                    done();
+                    xml2js.parseString(err.response.data, (parseErr, result) => {
+                        if (parseErr) {
+                            return done(parseErr);
+                        }
+
+                        const error = result.Error;
+                        assert.equal(error.Code[0], 'InvalidArgument');
+                        assert.equal(error.Message[0], 'POST requires exactly one file upload per request.');
+                        done();
+                    });
                 });
         });
     });
