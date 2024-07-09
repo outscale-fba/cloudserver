@@ -436,6 +436,104 @@ describe('POST object', () => {
         });
     });
 
+    it('should handle error when content-type is incorrect', done => {
+        const { bucketName, url } = testContext;
+        // Prep fields then remove the key field
+        let fields = calculateFields(ak, sk, bucketName);
+        fields = fields.filter(e => e.name !== 'key');
+
+        const formData = new FormData();
+
+        fields.forEach(field => {
+            formData.append(field.name, field.value);
+        });
+
+        formData.append('file', fs.createReadStream(path.join(__dirname, filename)));
+
+        formData.getLength((err, length) => {
+            if (err) {
+                return done(err);
+            }
+
+            const headers = {
+                ...formData.getHeaders(),
+                'Content-Length': length,
+            };
+            headers['content-type'] = 'application/json';
+            return axios.post(url, formData, {
+                headers,
+            })
+                .then(() => {
+                    done(new Error('Request should not succeed wrong content-type'));
+                })
+                .catch(err => {
+                    assert.ok(err.response, 'Error should be returned by axios');
+
+                    // Parse the XML error response
+                    xml2js.parseString(err.response.data, (err, result) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        const error = result.Error;
+                        assert.equal(error.Code[0], 'PreconditionFailed');
+                        assert.equal(error.Message[0],
+                            'Bucket POST must be of the enclosure-type multipart/form-data');
+                        return done();
+                    });
+                });
+        });
+    });
+
+    it('should handle error when content-type is missing', done => {
+        const { bucketName, url } = testContext;
+        // Prep fields then remove the key field
+        let fields = calculateFields(ak, sk, bucketName);
+        fields = fields.filter(e => e.name !== 'key');
+
+        const formData = new FormData();
+
+        fields.forEach(field => {
+            formData.append(field.name, field.value);
+        });
+
+        formData.append('file', fs.createReadStream(path.join(__dirname, filename)));
+
+        formData.getLength((err, length) => {
+            if (err) {
+                return done(err);
+            }
+
+            const headers = {
+                ...formData.getHeaders(),
+                'Content-Length': length,
+            };
+            delete headers['content-type'];
+            return axios.post(url, formData, {
+                headers,
+            })
+                .then(() => {
+                    done(new Error('Request should not succeed without correct content-type'));
+                })
+                .catch(err => {
+                    assert.ok(err.response, 'Error should be returned by axios');
+
+                    // Parse the XML error response
+                    xml2js.parseString(err.response.data, (err, result) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        const error = result.Error;
+                        assert.equal(error.Code[0], 'PreconditionFailed');
+                        assert.equal(error.Message[0],
+                            'Bucket POST must be of the enclosure-type multipart/form-data');
+                        return done();
+                    });
+                });
+        });
+    });
+
     it('should upload an object with key slash', done => {
         const { bucketName, url } = testContext;
         const slashKey = '/';
