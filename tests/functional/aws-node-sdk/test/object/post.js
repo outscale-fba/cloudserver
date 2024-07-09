@@ -388,6 +388,54 @@ describe('POST object', () => {
         });
     });
 
+    it('should handle error when key is missing', done => {
+        const { bucketName, url } = testContext;
+        // Prep fields then remove the key field
+        let fields = calculateFields(ak, sk, bucketName);
+        fields = fields.filter(e => e.name !== 'key');
+
+        const formData = new FormData();
+
+        fields.forEach(field => {
+            formData.append(field.name, field.value);
+        });
+
+        formData.append('file', fs.createReadStream(path.join(__dirname, filename)));
+
+        formData.getLength((err, length) => {
+            if (err) {
+                return done(err);
+            }
+
+            return axios.post(url, formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                    'Content-Length': length,
+                },
+            })
+                .then(() => {
+                    done(new Error('Request should not succeed without key field'));
+                })
+                .catch(err => {
+                    assert.ok(err.response, 'Error should be returned by axios');
+
+                    // Parse the XML error response
+                    xml2js.parseString(err.response.data, (err, result) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        const error = result.Error;
+                        assert.equal(error.Code[0], 'InvalidArgument');
+                        assert.equal(error.Message[0],
+                            'Bucket POST must contain a field named '
+                            + "'key'.  If it is specified, please check the order of the fields.");
+                        return done();
+                    });
+                });
+        });
+    });
+
     it('should upload an object with key slash', done => {
         const { bucketName, url } = testContext;
         const slashKey = '/';
